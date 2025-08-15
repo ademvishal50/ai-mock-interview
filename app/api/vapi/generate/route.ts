@@ -2,14 +2,19 @@ import { db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
 import { google } from "@ai-sdk/google";
 import { generateText } from 'ai';
+import { signInWithEmailAndPassword } from "firebase/auth";
+
+import { getCurrentUser } from '@/lib/actions/auth.action'
 
 export async function GET() {
     return Response.json({success:true, data: 'THANK YOU!'},{status: 200});       
 }
 
 export async function  POST(request: Request) {
-    const {type, role, level, techstack, amount, userid} = await request.json();
+    const {type, role, level, techstack, amount} = await request.json();
 
+    const user = await getCurrentUser();
+    
     try{
         const {text: questions} = await generateText({
             // model: google('gemini-1.5-pro-latest'),
@@ -30,7 +35,7 @@ export async function  POST(request: Request) {
             role, type, level, 
             techstack: techstack.split(','),
             questions: JSON.parse(questions),
-            userId: userid,
+            userId: user?.id,
             finalized: true,
             coverImage: getRandomInterviewCover(),
             createdAt: new Date().toISOString()
