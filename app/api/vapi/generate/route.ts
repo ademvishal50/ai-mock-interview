@@ -11,10 +11,13 @@ export async function GET() {
 }
 
 export async function  POST(request: Request) {
-    const {type, role, level, techstack, amount} = await request.json();
-
     const user = await getCurrentUser();
-    
+
+    if (!user || !user!.id) {
+        return Response.json({ success: false, error: 'User not authenticated' }, { status: 401 });
+    }
+    const {type, role, level, techstack, amount } = await request.json();
+
     try{
         const {text: questions} = await generateText({
             // model: google('gemini-1.5-pro-latest'),
@@ -33,7 +36,7 @@ export async function  POST(request: Request) {
         });
         const interview = { 
             role, type, level, 
-            techstack: techstack.split(','),
+            techstack: techstack.split(/[\s,]+/),
             questions: JSON.parse(questions),
             userId: user?.id,
             finalized: true,
