@@ -1,7 +1,9 @@
 'use client'
 
 import { interviewer } from '@/constants';
-import { createFeedback } from '@/lib/actions/general.action';
+import { db } from '@/firebase/client';
+import { setCompletedInterview, signOut } from '@/lib/actions/auth.action';
+import { createFeedback, getInterviewById } from '@/lib/actions/general.action';
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { cn } from '@/lib/utils';
@@ -10,6 +12,7 @@ import { Assistant } from 'next/font/google';
 import Image from 'next/image'
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
+import { id } from 'zod/v4/locales';
 
 enum CallStatus {
     INACTIVE = 'INACTIVE',
@@ -24,7 +27,8 @@ interface SavedMessage{
 }
 
 const Agent = ({ userName, userId, type, interviewId, questions}:AgentProps) => {
-
+    console.log("Debug1: ",interviewId,userId, type);
+    
     const router = useRouter();
     const [isSpeaking, setIsSpeaking] = useState(false);
     
@@ -71,29 +75,26 @@ const Agent = ({ userName, userId, type, interviewId, questions}:AgentProps) => 
 
     const handleGenerateFeedback = async (messages:SavedMessage[])=>{
         console.log('Generate feedback here.');
-
         const {success, feedbackId: id}= await createFeedback({
             interviewId: interviewId!,
             userId: userId!,
             transcript: messages
         })
-
+        console.log('Feedback loading to successful: ', id);
+        
         if(success && id){
-            router.push(`/interview/${interviewId}/feedback`)
+            console.log('Feedback saved successfully: ', id);
+            setCompletedInterview(interviewId!);
+            signOut();
+            router.push(`/sign-in`)
         }else{
             console.log('Error saving feedback');
-            router.push('/')
-            
+            router.push('/') 
         }
-        
     }
     useEffect(()=>{
         if(callStatus == CallStatus.FINISHED){
-            if(type === 'generate'){
-                router.push('/')
-            }else{
-                handleGenerateFeedback(messages);
-            }
+            handleGenerateFeedback(messages);
         }
         if(callStatus === CallStatus.FINISHED) router.push('/');
     }, [messages, callStatus, type, userId]);
@@ -101,26 +102,17 @@ const Agent = ({ userName, userId, type, interviewId, questions}:AgentProps) => 
     const handleCall = async () =>{
         setCallStatus(CallStatus.CONNECTING);
 
-        if(type === 'generate'){
-            await vapi.start(undefined,undefined,undefined,process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
-                variableValues: {
-                    username: userName,
-                    userid: userId,
-                }
-            })
-        }else{
-            let formattedQuestions = '';
+        let formattedQuestions = '';
 
-            if(questions){
-                formattedQuestions = questions.map((question)=> `- ${question}`).join('\n');
-            }
-
-            await vapi.start(interviewer, {
-                variableValues: {
-                    questions: formattedQuestions
-                }
-            })
+        if(questions){
+            formattedQuestions = questions.map((question)=> `- ${question}`).join('\n');
         }
+
+        await vapi.start(interviewer, {
+            variableValues: {
+                questions: formattedQuestions
+            }
+        })
         
     }
 

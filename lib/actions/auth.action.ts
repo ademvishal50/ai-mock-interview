@@ -3,6 +3,7 @@
 
 import { db,auth } from "@/firebase/admin";
 import { cookies } from "next/headers";
+import { getInterviewById } from "./general.action";
 
 const ONE_WEEK = 60 * 60 * 24 * 7;
 export async function signUp(params: SignUpParams) {
@@ -39,6 +40,8 @@ export async function signUp(params: SignUpParams) {
     } 
 }
 
+
+
 export async function signIn(params: SignInParams) {
     const {email, idToken} = params;
 
@@ -51,7 +54,6 @@ export async function signIn(params: SignInParams) {
                 message: 'User does not exist. Create an account instead.'
             }
         }
-
         await setSessionCookie(idToken);
     }catch(e){
 
@@ -60,10 +62,50 @@ export async function signIn(params: SignInParams) {
         return{
             success:false,
             message:'Failed to log into an account.'
-        }
-        
+        }   
     }
+}
+
+export async function signOut() {
+  try {
+    console.log("Signing out user...");
     
+    const cookieStore = await cookies();
+    cookieStore.delete("session");     
+
+    return {
+      success: true,
+      message: "Signed out successfully.",
+    };
+  } catch (e) {
+    console.error("Sign out error:", e);
+    return {
+      success: false,
+      message: "Failed to sign out.",
+    };
+  }
+}
+
+
+export async function setCompletedInterview(interviewId: string) {
+
+ 
+    try{
+        const interview = await getInterviewById(interviewId!);
+        interview!.completed = true;
+        await db.collection('interviews').doc(interviewId!).set(interview!);
+        return {
+            success: true,
+            message:"Interview marked as completed."
+        }
+    }catch (e: any){
+        console.error("Error marking interview as completed", e);
+
+        return{
+            success: false,
+            message:'Error marking interview as completed'
+        }
+    } 
 }
 
 export async function setSessionCookie(idToken: string) {
@@ -103,11 +145,36 @@ export async function getCurrentUser(): Promise<User | null> {
     }
 }
 
-export async function isAuthenticated() {
-    const user = await getCurrentUser();
-
-    return !!user;
-
+export async function getAdminUser(): Promise<Admin | null> {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session')?.value;
     
+    if(!sessionCookie) return null;
+
+    try{
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+        // Check for custom claim
+        if (decodedClaims.admin === true) {
+            // Optionally fetch admin profile from Firestore if needed
+            return {
+                id: decodedClaims.uid,
+                email: decodedClaims.email,
+                // ...other fields if needed
+            } as Admin;
+        }
+        return null;
+    }catch(e){
+        console.log(e);
+        return null;
+    }
 }
 
+export async function isAuthenticated() {
+    const user = await getCurrentUser();
+    return !!user; 
+}
+
+export async function isAdminAuthenticated() {
+    const admin = await getAdminUser();
+    return !!admin; 
+}

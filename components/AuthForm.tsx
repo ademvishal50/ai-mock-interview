@@ -40,6 +40,8 @@ const AuthForm = ({type}:{type: FormType}) => {
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try{
+      console.log("Debug sign in");
+      
       if(type ==="sign-up"){
         const {name, email, password} = values;
         const userCredentials = await createUserWithEmailAndPassword(auth,email,password);
@@ -59,7 +61,9 @@ const AuthForm = ({type}:{type: FormType}) => {
       }else{
         const {email, password} = values;
 
-        const userCredential = await signInWithEmailAndPassword(auth,email, password);
+        
+
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
         const idToken = await userCredential.user.getIdToken();
 
@@ -77,7 +81,7 @@ const AuthForm = ({type}:{type: FormType}) => {
       }
     }catch(error){
       console.log(error);
-      toast.error(`There was an error: ${error}`)
+      toast.error(`There was an error: Please sign-in again`)
     }
   }
   const isSignIn = type === 'sign-in';
@@ -101,12 +105,6 @@ const AuthForm = ({type}:{type: FormType}) => {
             <Button className="btn" type="submit">{isSignIn ? 'Sign in':'Create an Account'}</Button>
           </form>
         </Form>
-        <p className="text-center">
-          {isSignIn ? "No account yet?": "Have an account already?"}
-          <Link href={!isSignIn ? '/sign-in' : '/sign-up'} className="font-bold text-user-primary ml-1">
-            {!isSignIn ?"Sign in": "Sign up"}
-          </Link> 
-        </p>
       </div>
     </div>
   )

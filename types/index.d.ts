@@ -23,6 +23,7 @@ interface Interview {
   userId: string;
   type: string;
   finalized: boolean;
+  completed: boolean;
 }
 
 interface CreateFeedbackParams {
@@ -33,6 +34,12 @@ interface CreateFeedbackParams {
 }
 
 interface User {
+  name: string;
+  email: string;
+  id: string;
+}
+
+interface Admin {
   name: string;
   email: string;
   id: string;
@@ -76,12 +83,19 @@ interface SignInParams {
   idToken: string;
 }
 
+interface SignOutParams {
+  email: string;
+  idToken: string;
+}
+
 interface SignUpParams {
   uid: string;
   name: string;
   email: string;
   password: string;
 }
+
+
 
 type FormType = "sign-in" | "sign-up";
 
